@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 @app.route('/', methods=['POST','GET'])
 def home():
-    return "\_O_/"
+    return "<h1 style='color:blue'>\_O_/</h1>"
 
 @app.route('/wcl', methods=['POST'] )
 def generate_wcl():
@@ -82,4 +82,4 @@ def img_to_png_bytes(img: Image) -> bytes:
 
 
 if __name__ == "__main__":
-    pass
+    app.run()
