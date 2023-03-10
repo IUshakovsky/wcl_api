@@ -3,14 +3,13 @@ from matplotlib.colors import is_color_like
 from wordcloud import WordCloud
 from PIL import Image
 from io import BytesIO
-from pprint import pprint
 from numpy import array
+from string import punctuation
 
 MAX_WIDTH = 3600
 MAX_HEIGHT = 2400
 
 app = Flask(__name__)
-
 
 @app.route('/', methods=['POST','GET'])
 def home():
@@ -24,7 +23,7 @@ def generate_wcl():
         return jsonify({'error': check_status[1]}), 400
     
     params = parse_data(input_params)
-    text = input_params["text"]
+    text = preprocess_text(input_params["text"])
     
     return generate_img(text, params)
                 
@@ -63,7 +62,18 @@ def parse_data(data: dict) -> dict:
     
     return params
 
-
+def preprocess_text(text: str) -> str:
+    '''
+    replace {} () [] with spaces,
+    remove words of less then 2 letters
+    '''
+    trans_dict = dict.fromkeys(punctuation, '')
+    trans_dict.update(dict.fromkeys('[]{}()',' '))
+    
+    clean_str = text.translate(str.maketrans(trans_dict))
+    words_list = [word for word in clean_str.split() if len(word) > 2 ]
+    return ' '.join(words_list)
+    
 def generate_img(text:str, params:dict) -> bytes:
     wc = WordCloud(**params)
     wc.generate(text)
@@ -79,7 +89,6 @@ def img_to_png_bytes(img: Image) -> bytes:
     img.save(img_bytes, format='PNG')
     img_bytes.seek(0)
     return img_bytes.read()
-
 
 if __name__ == "__main__":
     app.run()
