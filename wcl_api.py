@@ -11,10 +11,6 @@ MAX_HEIGHT = 2400
 
 app = Flask(__name__)
 
-@app.route('/', methods=['POST','GET'])
-def home():
-    return "<h1 style='color:blue'>\_O_/</h1>"
-
 @app.route('/wcl', methods=['POST'] )
 def generate_wcl():
     input_params = request.get_json()
@@ -51,14 +47,20 @@ def parse_data(data: dict) -> dict:
                 for item in {**default_params, **data}.items() 
                 if item[0] in default_params 
     }
-    
+        
+    params['width'] = min(int(params['width']), MAX_WIDTH)    
+    params['height'] = min(int(params['height']), MAX_HEIGHT)
+
     if params['mask'] not in {'circle','cloud'}:
         params.pop('mask')
     else:
-        params['mask'] = array(Image.open(f'masks/{params["mask"]}.png'))
-    
-    params['width'] = min(params['width'], MAX_WIDTH)    
-    params['height'] = min(params['height'], MAX_HEIGHT)
+        maskImg = Image.open(f'masks/{params["mask"]}.png')
+        if params['mask'] == 'circle':
+            size = (params['width'],params['width'])
+        else:
+            size = (params['width'],params['height']) 
+        
+        params['mask'] = array(maskImg.resize(size))
     
     return params
 
@@ -77,6 +79,7 @@ def preprocess_text(text: str) -> str:
 def generate_img(text:str, params:dict) -> bytes:
     wc = WordCloud(**params)
     wc.generate(text)
+    
     
     np_data = wc.to_array()
     img_data = Image.fromarray(np_data)
