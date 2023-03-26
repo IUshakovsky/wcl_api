@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, jsonify, make_response
 from flask_restful import Resource, Api, reqparse
 from matplotlib.colors import is_color_like
 from wordcloud import WordCloud
@@ -13,54 +13,44 @@ MAX_HEIGHT = 2400
 app = Flask(__name__)
 api = Api(app)
 
-parser = reqparse.RequestParser()
-
 class WclGenerator(Resource):
     def post(self):
-        input_params = request.get_json() 
+        parser = reqparse.RequestParser()
+        parser.add_argument('text', required = 'True', trim='True')
+        parser.add_argument('background_color', default='white', store_missing=True)
+        parser.add_argument('width', type=int, default='1200')
+        parser.add_argument('height', type=int, default='800')
+        parser.add_argument('mask', choices=('circle','cloud', None), default = 'white')
         
-        if not (check_status := self._check_input(input_params))[0]:
-            return jsonify({'error': check_status[1]}), 400
+        args = parser.parse_args(strict=True)
         
-        params = self._parse_data(input_params)
-        text = self._preprocess_text(input_params["text"])
+        if not (check_status := self._check_input(args))[0]:
+            return {'message': check_status[1]}, 400
         
-        response = make_response(self._generate_img(text, params))
+        text = self._preprocess_text(args["text"])
+        params_for_wcl = self._get_params_for_wcl(args)
+
+        response = make_response(self._generate_img(text, params_for_wcl))
         response.headers.set('Content-Type', 'image/png')
         
         return response  
 
-    def _check_input(self, data: dict) -> tuple:
-        if 'text' not in data:
-            return (False,'Missing required parameter Text')
-        
+    def _check_input(self, data: dict) -> tuple:        
         if 'background_color' in data and \
             (bg_color := data['background_color']) != None: 
             if not is_color_like(bg_color):
-                return (False, 'Incorrect value of background_color parameter')
+                return (False, {'background_color': 'Not color like value'})
         
         return (True,'')
     
-    def _parse_data(self, data: dict) -> dict:
-        default_params = {
-            "width":            1200,
-            "height":           800,
-            "collocations":     True,
-            "background_color": "white",
-            "mask":             None    
-        }
-        
-        params = { item[0]:item[1] 
-                    for item in {**default_params, **data}.items() 
-                    if item[0] in default_params 
-        }
+    def _get_params_for_wcl(self, params: dict) -> dict:
+        params.pop('text')
+        params['collocations'] = True
             
         params['width'] = min(int(params['width']), MAX_WIDTH)    
         params['height'] = min(int(params['height']), MAX_HEIGHT)
 
-        if params['mask'] not in {'circle','cloud'}:
-            params.pop('mask')
-        else:
+        if params['mask']:
             maskImg = Image.open(f'masks/{params["mask"]}.png')
             if params['mask'] == 'circle':
                 size = (params['width'],params['width'])
@@ -68,6 +58,9 @@ class WclGenerator(Resource):
                 size = (params['width'],params['height']) 
             
             params['mask'] = array(maskImg.resize(size))
+        
+        if not params['background_color']:
+            params['background_color'] = 'white'
         
         return params
 
