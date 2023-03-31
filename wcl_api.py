@@ -20,7 +20,7 @@ class WclGenerator(Resource):
         parser.add_argument('background_color', default='white', store_missing=True)
         parser.add_argument('width', type=int, default='1200')
         parser.add_argument('height', type=int, default='800')
-        parser.add_argument('mask', choices=('circle','cloud', None), default = 'white')
+        parser.add_argument('shape', choices=('circle','cloud', None), default = 'white')
         
         args = parser.parse_args(strict=True)
         
@@ -50,13 +50,14 @@ class WclGenerator(Resource):
         params['width'] = min(int(params['width']), MAX_WIDTH)    
         params['height'] = min(int(params['height']), MAX_HEIGHT)
 
-        if params['mask']:
-            maskImg = Image.open(f'masks/{params["mask"]}.png')
-            if params['mask'] == 'circle':
+        if params['shape']:
+            maskImg = Image.open(f'masks/{params["shape"]}.png')
+            if params['shape'] == 'circle':
                 size = (params['width'],params['width'])
             else:
                 size = (params['width'],params['height']) 
             
+            params.pop('shape')
             params['mask'] = array(maskImg.resize(size))
         
         if not params['background_color']:
@@ -69,11 +70,11 @@ class WclGenerator(Resource):
         replace {} () [] with spaces,
         remove words of less then 2 letters
         '''
-        trans_dict = dict.fromkeys(punctuation, '')
+        trans_dict = dict.fromkeys(punctuation, ' ')
         trans_dict.update(dict.fromkeys('[]{}()',' '))
         
         clean_str = text.translate(str.maketrans(trans_dict))
-        words_list = [word for word in clean_str.split() if len(word) > 2 ]
+        words_list = [word for word in clean_str.split() ] #if len(word) > 2 ]
         return ' '.join(words_list)
         
     def _generate_img(self, text:str, params:dict) -> bytes:
