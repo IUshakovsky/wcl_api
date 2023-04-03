@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, make_response
+from flask import Flask, make_response
 from flask_restful import Resource, Api, reqparse
 from matplotlib.colors import is_color_like
 from wordcloud import WordCloud
@@ -6,6 +6,7 @@ from PIL import Image
 from io import BytesIO
 from numpy import array
 from string import punctuation
+from loguru import logger
 
 MAX_WIDTH = 3600
 MAX_HEIGHT = 2400
@@ -23,6 +24,8 @@ class WclGenerator(Resource):
         parser.add_argument('shape', choices=('circle','cloud', None), default = 'white')
         
         args = parser.parse_args(strict=True)
+        logger.add('./logs/wcl.log, ret', retention='7 days')
+        logger.info(args)
         
         if not (check_status := self._check_input(args))[0]:
             return {'message': check_status[1]}, 400
@@ -74,7 +77,7 @@ class WclGenerator(Resource):
         trans_dict.update(dict.fromkeys('[]{}()',' '))
         
         clean_str = text.translate(str.maketrans(trans_dict))
-        words_list = [word for word in clean_str.split() ] #if len(word) > 2 ]
+        words_list = [word for word in clean_str.split() if len(word) > 2 ]
         return ' '.join(words_list)
         
     def _generate_img(self, text:str, params:dict) -> bytes:

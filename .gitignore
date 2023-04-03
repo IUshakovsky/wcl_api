@@ -5,3 +5,4 @@ tst.http
 *.png
 .venv
 .DS_Store
+/logs
