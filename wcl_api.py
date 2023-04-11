@@ -24,7 +24,7 @@ class WclGenerator(Resource):
         parser.add_argument('shape', choices=('circle','cloud', None), default = 'white')
         
         args = parser.parse_args(strict=True)
-        logger.add('./logs/wcl.log, ret', retention='7 days')
+        logger.add('./logs/wcl.log', retention='7 days')
         logger.info(args)
         
         if not (check_status := self._check_input(args))[0]:
